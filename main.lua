@@ -48,6 +48,10 @@ function ComicMeta:addToMainMenu(menu_items)
 end
 
 function ComicMeta:onComicMeta()
+    if not FileManager.instance then
+        return
+    end
+
     -- Scan current folder for .cbz files
     local current_folder = FileManager.instance.file_chooser.path
     local cbz_files = {}
