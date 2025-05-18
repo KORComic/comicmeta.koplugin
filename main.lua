@@ -18,7 +18,7 @@ local _ = require("gettext")
 local T = ffiUtil.template
 
 local ComicMeta = WidgetContainer:extend{
-    name = "hello",
+    name = "comicmeta",
     is_doc_only = false,
 }
 
@@ -133,7 +133,7 @@ function ComicMeta:onComicMeta()
                 doc_settings:close()
 
                 -- Update the book info in the file manager
-                UIManager:broadcastEvent(Event:new("BookInfoChanged", file_path)) 
+                UIManager:broadcastEvent(Event:new("BookInfoChanged", file_path))
                 UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", file_path))
                 UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
             end
