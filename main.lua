@@ -67,78 +67,75 @@ function ComicMeta:onComicMeta()
         -- For each found .cbz file, extract its metadata from ComicInfo.xml
         for dummy, file in ipairs(cbz_files) do
             local file_path = ffiUtil.realpath(current_folder .. "/" .. file)
-            -- Make sure we have a sidecar file (Lua has no continue.. so we get another nested if, yay -_-)
-            if DocSettings:hasSidecarFile(file_path) then
-                -- Extract ComicInfo.xml from the .cbz file
-                local handle = io.popen(T(ZIP_EXTRACT_CONTENT, file_path, "ComicInfo.xml"))
-                local xml_content = nil
-                if handle then
-                    xml_content = handle:read("*a")
-                    handle:close()
+            -- Extract ComicInfo.xml from the .cbz file
+            local handle = io.popen(T(ZIP_EXTRACT_CONTENT, file_path, "ComicInfo.xml"))
+            local xml_content = nil
+            if handle then
+                xml_content = handle:read("*a")
+                handle:close()
+            end
+
+            if xml_content and #xml_content > 0 then
+                -- Parse the XML content and create a metadata table
+                local metadata = {
+                    title = xml_content:match("<Title>(.-)</Title>"),
+                    authors = xml_content:match("<Writer>(.-)</Writer>"),
+                    series = xml_content:match("<Series>(.-)</Series>"),
+                    series_index = xml_content:match("<Number>(.-)</Number>"),
+                    description = xml_content:match("<Summary>(.-)</Summary>"),
+                }
+
+                -- Fixup metadata
+                for key, value in pairs(metadata) do
+                    if key == "title" then
+                        metadata[key] = util.htmlEntitiesToUtf8(value)
+                    elseif key == "authors" then
+                            metadata[key] = util.htmlEntitiesToUtf8(value)
+                    elseif key == "series" then
+                        metadata[key] = util.htmlEntitiesToUtf8(value)
+                    elseif key == "series_index" then
+                        metadata[key] = tonumber(util.htmlEntitiesToUtf8(value))
+                    elseif key == "description" then
+                        -- Description may (often in EPUB, but not always) or may not (rarely in PDF) be HTML
+                        metadata[key] = util.htmlToPlainTextIfHtml(util.htmlEntitiesToUtf8(value))
+                    end
                 end
 
-                if xml_content and #xml_content > 0 then
-                    -- Parse the XML content and create a metadata table
-                    local metadata = {
-                        title = xml_content:match("<Title>(.-)</Title>"),
-                        authors = xml_content:match("<Writer>(.-)</Writer>"),
-                        series = xml_content:match("<Series>(.-)</Series>"),
-                        series_index = xml_content:match("<Number>(.-)</Number>"),
-                        description = xml_content:match("<Summary>(.-)</Summary>"),
-                    }
-
-                    -- Fixup metadata
-                    for key, value in pairs(metadata) do
-                        if key == "title" then
-                            metadata[key] = util.htmlEntitiesToUtf8(value)
-                        elseif key == "authors" then
-                                metadata[key] = util.htmlEntitiesToUtf8(value)
-                        elseif key == "series" then
-                            metadata[key] = util.htmlEntitiesToUtf8(value)
-                        elseif key == "series_index" then
-                            metadata[key] = tonumber(util.htmlEntitiesToUtf8(value))
-                        elseif key == "description" then
-                            -- Description may (often in EPUB, but not always) or may not (rarely in PDF) be HTML
-                            metadata[key] = util.htmlToPlainTextIfHtml(util.htmlEntitiesToUtf8(value))
-                        end
-                    end
-
-                    -- Retrieve current metadata
-                    local doc_settings = DocSettings:openSettingsFile(file_path)
-                    if not doc_settings then
-                        UIManager:show(InfoMessage:new{
-                            text = _("Failed to open DocSettings for file: ") .. file,
-                        })
-                        return
-                    end
-
-                    -- Read the existing doc_props property
-                    local doc_props = doc_settings:readSetting("doc_props") or {}
-                    doc_settings:saveSetting("doc_props", {
-                        title = doc_props.title or "",
-                        authors = doc_props.authors or "",
-                        series = doc_props.series or "",
-                        series_index = doc_props.series_index or "",
-                        description = doc_props.description or "",
+                -- Retrieve current metadata
+                local doc_settings = DocSettings:openSettingsFile(file_path)
+                if not doc_settings then
+                    UIManager:show(InfoMessage:new{
+                        text = _("Failed to open DocSettings for file: ") .. file,
                     })
-
-                    -- Update the custom properties with the new metadata
-                    for key, value in pairs(metadata) do
-                        doc_props[key] = value
-                    end
-
-                    -- Write the updated doc_props property back to the DocSettings
-                    doc_settings:saveSetting("custom_props", doc_props)
-
-                    -- Save the updated metadata back to the metadata file
-                    doc_settings:flushCustomMetadata(file_path)
-                    doc_settings:close()
-
-                    -- Update the book info in the file manager
-                    UIManager:broadcastEvent(Event:new("BookInfoChanged", file_path))
-                    UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", file_path))
-                    UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
+                    return
                 end
+
+                -- Read the existing doc_props property
+                local doc_props = doc_settings:readSetting("doc_props") or {}
+                doc_settings:saveSetting("doc_props", {
+                    title = doc_props.title or "",
+                    authors = doc_props.authors or "",
+                    series = doc_props.series or "",
+                    series_index = doc_props.series_index or "",
+                    description = doc_props.description or "",
+                })
+
+                -- Update the custom properties with the new metadata
+                for key, value in pairs(metadata) do
+                    doc_props[key] = value
+                end
+
+                -- Write the updated doc_props property back to the DocSettings
+                doc_settings:saveSetting("custom_props", doc_props)
+
+                -- Save the updated metadata back to the metadata file
+                doc_settings:flushCustomMetadata(file_path)
+                doc_settings:close()
+
+                -- Update the book info in the file manager
+                UIManager:broadcastEvent(Event:new("BookInfoChanged", file_path))
+                UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", file_path))
+                UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
             end
         end
     end
