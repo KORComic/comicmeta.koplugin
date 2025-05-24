@@ -102,7 +102,7 @@ function ComicMeta:onComicMeta()
                 end
 
                 -- Retrieve current metadata
-                local doc_settings = DocSettings:openSettingsFile(file_path)
+                local doc_settings = DocSettings.openSettingsFile(file_path)
                 if not doc_settings then
                     UIManager:show(InfoMessage:new{
                         text = _("Failed to open DocSettings for file: ") .. file,
@@ -130,7 +130,6 @@ function ComicMeta:onComicMeta()
 
                 -- Save the updated metadata back to the metadata file
                 doc_settings:flushCustomMetadata(file_path)
-                doc_settings:close()
 
                 -- Update the book info in the file manager
                 UIManager:broadcastEvent(Event:new("BookInfoChanged", file_path))
