@@ -2,34 +2,38 @@
 Plugin for KOReader to extract metadata from .cbz files as Custom Metadata
 
 @module koplugin.ComicMeta
---]]--
+--]]
+--
 
+local Dispatcher = require("dispatcher") -- luacheck:ignore
+local DocSettings = require("docsettings")
 local Event = require("ui/event")
-local Dispatcher = require("dispatcher")  -- luacheck:ignore
+local FileManager = require("apps/filemanager/filemanager")
 local InfoMessage = require("ui/widget/infomessage")
 local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
-local lfs = require("libs/libkoreader-lfs")
-local DocSettings = require("docsettings")
-local FileManager = require("apps/filemanager/filemanager")
+local XmlObject = require("lib.xml")
 local ffiUtil = require("ffi/util")
+local lfs = require("libs/libkoreader-lfs")
+local logger = require("logger")
 local util = require("util")
-local _ = require("gettext")
 local T = ffiUtil.template
+local _ = require("gettext")
 
-local ComicMeta = WidgetContainer:extend{
+local ComicMeta = WidgetContainer:extend({
     name = "comicmeta",
     is_doc_only = false,
-}
+})
 
-local ZIP_LIST            = "unzip -qql \"%1\""
-local ZIP_EXTRACT_CONTENT = "unzip -qqp \"%1\" \"%2\""
-local ZIP_EXTRACT_FILE    = "unzip -qqo \"%1\" \"%2\" -d \"%3\"" -- overwrite
-
-
+local ZIP_LIST = 'unzip -qql "%1"'
+local ZIP_EXTRACT_CONTENT = 'unzip -qqp "%1" "%2"'
+local ZIP_EXTRACT_FILE = 'unzip -qqo "%1" "%2" -d "%3"' -- overwrite
 
 function ComicMeta:onDispatcherRegisterActions()
-    Dispatcher:registerAction("comicmeta_action", {category="none", event="ComicMeta", title=_("Get Comic Meta"), general=true,})
+    Dispatcher:registerAction(
+        "comicmeta_action",
+        { category = "none", event = "ComicMeta", title = _("Get Comic Meta"), general = true }
+    )
 end
 
 function ComicMeta:init()
@@ -65,7 +69,7 @@ function ComicMeta:onComicMeta()
 
     if #cbz_files > 0 then
         -- For each found .cbz file, extract its metadata from ComicInfo.xml
-        for dummy, file in ipairs(cbz_files) do
+        for _, file in ipairs(cbz_files) do
             local file_path = ffiUtil.realpath(current_folder .. "/" .. file)
             -- Extract ComicInfo.xml from the .cbz file
             local handle = io.popen(T(ZIP_EXTRACT_CONTENT, file_path, "ComicInfo.xml"))
@@ -76,21 +80,29 @@ function ComicMeta:onComicMeta()
             end
 
             if xml_content and #xml_content > 0 then
+                local parser = XmlObject:new()
+                local root = parser:parse(xml_content)
+                local comic_metadata = parser:toTable(root)
+
+                logger.dbg("ComicMeta:onComicMeta comic_metadata", comic_metadata)
+
                 -- Parse the XML content and create a metadata table
                 local metadata = {
-                    title = xml_content:match("<Title>(.-)</Title>"),
-                    authors = xml_content:match("<Writer>(.-)</Writer>"),
-                    series = xml_content:match("<Series>(.-)</Series>"),
-                    series_index = xml_content:match("<Number>(.-)</Number>"),
-                    description = xml_content:match("<Summary>(.-)</Summary>"),
+                    title = comic_metadata.Title,
+                    authors = comic_metadata.Writer,
+                    series = comic_metadata.Series,
+                    series_index = comic_metadata.Number,
+                    description = comic_metadata.Summary,
                 }
+
+                logger.dbg("ComicMeta:onComicMeta metadata", metadata)
 
                 -- Fixup metadata
                 for key, value in pairs(metadata) do
                     if key == "title" then
                         metadata[key] = util.htmlEntitiesToUtf8(value)
                     elseif key == "authors" then
-                            metadata[key] = util.htmlEntitiesToUtf8(value)
+                        metadata[key] = util.htmlEntitiesToUtf8(value)
                     elseif key == "series" then
                         metadata[key] = util.htmlEntitiesToUtf8(value)
                     elseif key == "series_index" then
@@ -104,9 +116,9 @@ function ComicMeta:onComicMeta()
                 -- Retrieve current metadata
                 local doc_settings = DocSettings.openSettingsFile(file_path)
                 if not doc_settings then
-                    UIManager:show(InfoMessage:new{
+                    UIManager:show(InfoMessage:new({
                         text = _("Failed to open DocSettings for file: ") .. file,
-                    })
+                    }))
                     return
                 end
 
