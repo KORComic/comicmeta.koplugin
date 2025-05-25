@@ -1,10 +1,10 @@
 name: Busted
 on: [push, pull_request]
 jobs:
-  sile:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Run Busted
-        uses: lunarmodules/busted@v0
+        uses: lunarmodules/busted@v2.2.0
