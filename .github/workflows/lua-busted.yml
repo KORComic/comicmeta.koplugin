@@ -6,5 +6,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Run Busted
         uses: lunarmodules/busted@v2.2.0
+        env:
+          LUA_PATH: "./?.lua;./lib/?.lua;"
+
