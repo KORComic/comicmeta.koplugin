@@ -106,7 +106,7 @@ function ComicMeta:onComicMeta()
                     elseif key == "series" then
                         metadata[key] = util.htmlEntitiesToUtf8(value)
                     elseif key == "series_index" then
-                        metadata[key] = tonumber(util.htmlEntitiesToUtf8(value))
+                        metadata[key] = util.htmlEntitiesToUtf8(value)
                     elseif key == "description" then
                         -- Description may (often in EPUB, but not always) or may not (rarely in PDF) be HTML
                         metadata[key] = util.htmlToPlainTextIfHtml(util.htmlEntitiesToUtf8(value))
