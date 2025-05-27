@@ -69,7 +69,7 @@ function ComicMeta:onComicMeta()
 
     if #cbz_files > 0 then
         -- For each found .cbz file, extract its metadata from ComicInfo.xml
-        for dummy, file in ipairs(cbz_files) do
+        for __, file in ipairs(cbz_files) do
             local file_path = ffiUtil.realpath(current_folder .. "/" .. file)
             -- Extract ComicInfo.xml from the .cbz file
             local handle = io.popen(T(ZIP_EXTRACT_CONTENT, file_path, "ComicInfo.xml"))
@@ -114,7 +114,7 @@ function ComicMeta:onComicMeta()
                     elseif key == "keywords" then
                         local out = ""
                         local values = util.splitToArray(value, ',', false)
-                        for idx, val in ipairs(values) do
+                        for __, val in ipairs(values) do
                             if #out > 0 then
                                 out = out .. "\n"
                             end
@@ -137,7 +137,7 @@ function ComicMeta:onComicMeta()
                 -- Read the existing doc_props property
                 local doc_props = doc_settings:readSetting("doc_props") or {}
                 local original_doc_props = {}
-                for key, dummy in pairs(metadata) do
+                for key, __ in pairs(metadata) do
                     original_doc_props[key] = doc_props[key] or ""
                 end
                 doc_settings:saveSetting("doc_props", original_doc_props)
