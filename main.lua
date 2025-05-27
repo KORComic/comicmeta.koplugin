@@ -93,6 +93,8 @@ function ComicMeta:onComicMeta()
                     series = comic_metadata.Series,
                     series_index = comic_metadata.Number,
                     description = comic_metadata.Summary,
+                    keywords = comic_metadata.Tags,
+                    language = comic_metadata.LanguageISO,
                 }
 
                 logger.dbg("ComicMeta:onComicMeta metadata", metadata)
@@ -108,8 +110,18 @@ function ComicMeta:onComicMeta()
                     elseif key == "series_index" then
                         metadata[key] = util.htmlEntitiesToUtf8(value)
                     elseif key == "description" then
-                        -- Description may (often in EPUB, but not always) or may not (rarely in PDF) be HTML
                         metadata[key] = util.htmlEntitiesToUtf8(value)
+                    elseif key == "keywords" then
+                        local out = ""
+                        local values = util.splitToArray(value, ',', false)
+                        for idx, val in ipairs(values) do
+                            if #out > 0 then
+                                out = out .. "\n"
+                            end
+                            out = out .. util.htmlEntitiesToUtf8(util.trim(val))
+                        end
+
+                        metadata[key] = out
                     end
                 end
 
