@@ -69,7 +69,7 @@ function ComicMeta:onComicMeta()
 
     if #cbz_files > 0 then
         -- For each found .cbz file, extract its metadata from ComicInfo.xml
-        for _, file in ipairs(cbz_files) do
+        for dummy, file in ipairs(cbz_files) do
             local file_path = ffiUtil.realpath(current_folder .. "/" .. file)
             -- Extract ComicInfo.xml from the .cbz file
             local handle = io.popen(T(ZIP_EXTRACT_CONTENT, file_path, "ComicInfo.xml"))
