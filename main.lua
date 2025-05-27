@@ -142,7 +142,6 @@ function ComicMeta:onComicMeta()
                 doc_settings:flushCustomMetadata(file_path)
 
                 -- Update the book info in the file manager
-                UIManager:broadcastEvent(Event:new("BookInfoChanged", file_path))
                 UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", file_path))
                 UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
             end
