@@ -124,13 +124,11 @@ function ComicMeta:onComicMeta()
 
                 -- Read the existing doc_props property
                 local doc_props = doc_settings:readSetting("doc_props") or {}
-                doc_settings:saveSetting("doc_props", {
-                    title = doc_props.title or "",
-                    authors = doc_props.authors or "",
-                    series = doc_props.series or "",
-                    series_index = doc_props.series_index or "",
-                    description = doc_props.description or "",
-                })
+                local original_doc_props = {}
+                for key, dummy in pairs(metadata) do
+                    original_doc_props[key] = doc_props[key] or ""
+                end
+                doc_settings:saveSetting("doc_props", original_doc_props)
 
                 -- Update the custom properties with the new metadata
                 for key, value in pairs(metadata) do
