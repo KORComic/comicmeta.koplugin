@@ -101,17 +101,7 @@ function ComicMeta:onComicMeta()
 
                 -- Fixup metadata
                 for key, value in pairs(metadata) do
-                    if key == "title" then
-                        metadata[key] = util.htmlEntitiesToUtf8(value)
-                    elseif key == "authors" then
-                        metadata[key] = util.htmlEntitiesToUtf8(value)
-                    elseif key == "series" then
-                        metadata[key] = util.htmlEntitiesToUtf8(value)
-                    elseif key == "series_index" then
-                        metadata[key] = util.htmlEntitiesToUtf8(value)
-                    elseif key == "description" then
-                        metadata[key] = util.htmlEntitiesToUtf8(value)
-                    elseif key == "keywords" then
+                    if key == "keywords" then
                         local out = ""
                         local values = util.splitToArray(value, ',', false)
                         for __, val in ipairs(values) do
@@ -122,6 +112,8 @@ function ComicMeta:onComicMeta()
                         end
 
                         metadata[key] = out
+                    else
+                        metadata[key] = util.htmlEntitiesToUtf8(value)
                     end
                 end
 
