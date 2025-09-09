@@ -1,4 +1,4 @@
-local XmlObject = require("lib.xml")
+local XmlObject = require("lib.comicxml")
 
 describe("xml object", function()
     describe("parse sample", function()
