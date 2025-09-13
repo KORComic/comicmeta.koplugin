@@ -47,3 +47,55 @@ describe("ComicMeta utility functions", function()
         assert.is_false(ComicMeta:hasSubdirectories(subdir))
     end)
 end)
+
+describe("ComicMeta.writeCustomToC", function()
+    local ComicMeta = require("main")
+
+    it("saves correct ToC settings from pages data", function()
+        -- Mock doc_settings
+        local saved = {}
+        local doc_settings = {
+            saveSetting = function(_, key, value)
+                saved[key] = value
+            end
+        }
+
+        -- Example pages_data as parsed from ComicInfo.xml
+        local pages_data = {
+            Page = {
+                { Image = "0", Type = "FrontCover", Bookmark = "Capa" },
+                { Image = "1", Type = "Story", Bookmark = "Capítulo 1: Paraíso" },
+                { Image = "71", Type = "Story", Bookmark = "Capítulo 2: Pseudo-criaturas" },
+                { Image = "112", Type = "Story", Bookmark = "Capítulo 3: Hospedeiros" },
+                { Image = "159", Type = "Story", Bookmark = "Capítulo 4: Purgatório" },
+            }
+        }
+
+        ComicMeta:writeCustomToC(doc_settings, pages_data)
+
+        assert.is_true(saved.handmade_toc_enabled)
+        assert.is_false(saved.handmade_toc_edit_enabled)
+        assert.is_table(saved.handmade_toc)
+        assert.equals(5, #saved.handmade_toc)
+        assert.same(
+            { depth = 1, page = 1, title = "Capa" },
+            saved.handmade_toc[1]
+        )
+        assert.same(
+            { depth = 1, page = 2, title = "Capítulo 1: Paraíso" },
+            saved.handmade_toc[2]
+        )
+        assert.same(
+            { depth = 1, page = 72, title = "Capítulo 2: Pseudo-criaturas" },
+            saved.handmade_toc[3]
+        )
+        assert.same(
+            { depth = 1, page = 113, title = "Capítulo 3: Hospedeiros" },
+            saved.handmade_toc[4]
+        )
+        assert.same(
+            { depth = 1, page = 160, title = "Capítulo 4: Purgatório" },
+            saved.handmade_toc[5]
+        )
+    end)
+end)
