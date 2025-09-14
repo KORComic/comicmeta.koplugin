@@ -5,6 +5,7 @@ Plugin for KOReader to extract metadata from .cbz files as Custom Metadata
 --]]
 --
 
+local ConfirmBox = require("ui/widget/confirmbox")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
 local DocSettings = require("docsettings")
 local Event = require("ui/event")
@@ -47,11 +48,13 @@ function ComicMeta:addToMainMenu(menu_items)
         -- in which menu this should be appended
         sorting_hint = "more_tools",
         -- a callback when tapping
-        callback = self.onComicMeta,
+        callback = function()
+            self:onComicMeta()
+        end,
     }
 end
 
-local function processFile(cbz_file)
+function ComicMeta:processFile(cbz_file)
     -- Extract ComicInfo.xml from the .cbz file
     local handle = io.popen(T(ZIP_EXTRACT_CONTENT, cbz_file, "ComicInfo.xml"))
     local xml_content = nil
@@ -87,7 +90,7 @@ local function processFile(cbz_file)
     for key, value in pairs(metadata) do
         if key == "keywords" then
             local out = ""
-            local values = util.splitToArray(value, ',', false)
+            local values = util.splitToArray(value, ",", false)
             for __, val in ipairs(values) do
                 if #out > 0 then
                     out = out .. "\n"
@@ -134,29 +137,129 @@ local function processFile(cbz_file)
     UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
 end
 
+--- Recursively scans a folder and returns a list of all .cbz files found.
+---
+-- @param folder string: The folder to scan.
+-- @return table: List of .cbz file paths.
+function ComicMeta:scanCbzFilesRecursive(folder)
+    logger.dbg("ComicMeta -> scanCbzFilesRecursive scanning folder", folder)
+
+    local cbz_files = {}
+
+    for entry in lfs.dir(folder) do
+        if entry ~= "." and entry ~= ".." then
+            local full_path = folder .. "/" .. entry
+            local attr = lfs.attributes(full_path)
+
+            if attr and attr.mode == "directory" then
+                logger.dbg("ComicMeta -> scanCbzFilesRecursive entering subdirectory", full_path)
+
+                local sub_cbz = self:scanCbzFilesRecursive(full_path)
+
+                for _, f in ipairs(sub_cbz) do
+                    table.insert(cbz_files, f)
+                end
+            elseif entry:match("%.cbz$") then
+                logger.dbg("ComicMeta -> scanCbzFilesRecursive found cbz file", full_path)
+
+                table.insert(cbz_files, full_path)
+            end
+        end
+    end
+
+    if #cbz_files == 0 then
+        logger.dbg("ComicMeta -> scanCbzFilesRecursive no cbz files found")
+    end
+
+    return cbz_files
+end
+
+--- Checks if a folder contains any subdirectories.
+---
+-- @param folder string: The folder to check.
+-- @return boolean: True if subdirectories exist, false otherwise.
+function ComicMeta:hasSubdirectories(folder)
+    logger.dbg("ComicMeta -> hasSubdirectories checking folder", folder)
+
+    for entry in lfs.dir(folder) do
+        if entry ~= "." and entry ~= ".." then
+            local attr = lfs.attributes(folder .. "/" .. entry)
+
+            if attr and attr.mode == "directory" then
+                logger.dbg("ComicMeta -> hasSubdirectories found subdirectory", entry)
+                return true
+            end
+        end
+    end
+
+    logger.dbg("ComicMeta -> hasSubdirectories no subdirectories found")
+
+    return false
+end
+
+--- Processes all .cbz files in a folder, optionally recursively.
+---
+-- @param folder string: The folder to process.
+-- @param recursive boolean: Whether to process subfolders recursively.
+function ComicMeta:processAllCbz(folder, recursive)
+    logger.dbg("ComicMeta -> processAllCbz processing folder", folder, "recursive:", recursive)
+
+    local cbz_files = {}
+
+    if recursive then
+        cbz_files = self:scanCbzFilesRecursive(folder)
+    else
+        for file in lfs.dir(folder) do
+            if file:match("%.cbz$") then
+                logger.dbg("ComicMeta -> processAllCbz found cbz file", file)
+
+                table.insert(cbz_files, folder .. "/" .. file)
+            end
+        end
+    end
+
+    if #cbz_files == 0 then
+        logger.dbg("ComicMeta -> processAllCbz no cbz files found")
+
+        return
+    end
+
+    logger.dbg("ComicMeta -> processAllCbz found", #cbz_files, ".cbz files to process")
+
+    for __, file_path in ipairs(cbz_files) do
+        local real_path = ffiUtil.realpath(file_path)
+
+        logger.dbg("ComicMeta -> processAllCbz processing file", real_path)
+
+        self:processFile(real_path)
+    end
+end
+
 function ComicMeta:onComicMeta()
     if not FileManager.instance then
         return
     end
 
-    -- Scan current folder for .cbz files
     local current_folder = FileManager.instance.file_chooser.path
-    local cbz_files = {}
+    local has_subdirs = self:hasSubdirectories(current_folder)
 
-    -- Build a list of .cbz files in the current folder
-    for file in lfs.dir(current_folder) do
-        if file:match("%.cbz$") then
-            table.insert(cbz_files, file)
-        end
+    if not has_subdirs then
+        self:processAllCbz(current_folder, false)
+
+        return
     end
 
-    if #cbz_files > 0 then
-        -- For each found .cbz file, extract its metadata from ComicInfo.xml
-        for __, file in ipairs(cbz_files) do
-            local file_path = ffiUtil.realpath(current_folder .. "/" .. file)
-            processFile(file_path)
-        end
-    end
+    UIManager:show(ConfirmBox:new({
+        text = _("Subfolders detected. Process all .cbz files recursively?"),
+        cancel_text = _("No"),
+        cancel_callback = function()
+            self:processAllCbz(current_folder, false)
+        end,
+        ok_text = _("Yes"),
+        ok_callback = function()
+            self:processAllCbz(current_folder, true)
+        end,
+    }))
 end
 
 return ComicMeta
