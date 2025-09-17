@@ -155,7 +155,7 @@ function ComicMeta:scanCbzFilesRecursive(folder)
             local full_path = folder .. "/" .. entry
             local attr = lfs.attributes(full_path)
 
-            if attr and attr.mode == "directory" then
+            if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
                 logger.dbg("ComicMeta -> scanCbzFilesRecursive entering subdirectory", full_path)
 
                 local sub_cbz = self:scanCbzFilesRecursive(full_path)
@@ -189,7 +189,7 @@ function ComicMeta:hasSubdirectories(folder)
         if entry ~= "." and entry ~= ".." then
             local attr = lfs.attributes(folder .. "/" .. entry)
 
-            if attr and attr.mode == "directory" then
+            if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
                 logger.dbg("ComicMeta -> hasSubdirectories found subdirectory", entry)
                 return true
             end
