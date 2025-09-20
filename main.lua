@@ -56,12 +56,7 @@ function ComicMeta:processFile(cbz_file)
     local arc = Archiver.Reader:new()
 
     if arc:open(cbz_file) then
-        for entry in arc:iterate() do
-            if entry.mode == "file" and entry.path == "ComicInfo.xml" then
-                xml_content = arc:extractToMemory(entry.index)
-                break
-            end
-        end
+        xml_content = arc:extractToMemory("ComicInfo.xml")
         arc:close()
     end
 
