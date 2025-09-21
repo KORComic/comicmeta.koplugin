@@ -19,7 +19,4 @@ Follow these simple steps to get started:
 
 ## Usage
 
-When there is a folder detected, the plugin will ask if recursive extraction is
-wanted. If you choose yes, all cbz files in the folder and its subfolders will
-be processed. If you choose no, only the cbz files in the current folder will be
-processed.
+When you open a directory, the plugin will ask whether to extract recursively. If you choose Yes, all CBZ files in that directory and its subdirectories will be processed. If you choose No, only the CBZ files in the current directory will be processed.
