@@ -4,7 +4,11 @@ Plugin for KOReader to extract metadata from .cbz files as Custom Metadata
 @module koplugin.ComicMeta
 --]]
 --
-local Archiver = require("ffi/archiver")
+package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/?.lua"
+package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/lib/?.lua"
+package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/third_party/?/?.lua"
+
+local ComicLib = require("comiclib")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
 local DocSettings = require("docsettings")
@@ -13,7 +17,6 @@ local FileManager = require("apps/filemanager/filemanager")
 local InfoMessage = require("ui/widget/infomessage")
 local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
-local XmlObject = require("lib.comicxml")
 local ffiUtil = require("ffi/util")
 local lfs = require("libs/libkoreader-lfs")
 local logger = require("logger")
@@ -51,39 +54,26 @@ function ComicMeta:addToMainMenu(menu_items)
 end
 
 function ComicMeta:processFile(cbz_file)
-    -- Extract ComicInfo.xml from the .cbz file
-    local xml_content = nil
-    local arc = Archiver.Reader:new()
+    local comicInfo, ok = ComicLib.ComicInfo:new(cbz_file)
+    if not ok or comicInfo == nil then
+        UIManager:show(InfoMessage:new({
+            text = T(_("Failed to open CBZ file: {file}"), { file = cbz_file }),
+        }))
 
-    if arc:open(cbz_file) then
-        for entry in arc:iterate() do
-            if entry.mode == "file" and entry.path == "ComicInfo.xml" then
-                xml_content = arc:extractToMemory(entry.index)
-                break
-            end
-        end
-        arc:close()
-    end
-
-    if not xml_content or #xml_content == 0 then
         return
     end
 
-    local parser = XmlObject:new()
-    local root = parser:parse(xml_content)
-    local comic_metadata = parser:toTable(root)
-
-    logger.dbg("ComicMeta -> processFile comic_metadata", comic_metadata)
+    logger.dbg("ComicMeta -> processFile comic_metadata", comicInfo.metadata)
 
     -- Parse the XML content and create a metadata table
     local metadata = {
-        title = comic_metadata.Title,
-        authors = comic_metadata.Writer,
-        series = comic_metadata.Series,
-        series_index = comic_metadata.Number,
-        description = comic_metadata.Summary,
-        keywords = comic_metadata.Tags,
-        language = comic_metadata.LanguageISO,
+        title = comicInfo.metadata.Title,
+        authors = comicInfo.metadata.Writer,
+        series = comicInfo.metadata.Series,
+        series_index = comicInfo.metadata.Number,
+        description = comicInfo.metadata.Summary,
+        keywords = comicInfo.metadata.Tags,
+        language = comicInfo.metadata.LanguageISO,
     }
 
     logger.dbg("ComicMeta -> processFile metadata", metadata)
@@ -132,7 +122,7 @@ function ComicMeta:processFile(cbz_file)
     -- Write the updated doc_props property back to the DocSettings
     custom_doc_settings:saveSetting("custom_props", doc_props)
 
-    self:writeCustomToC(doc_settings, comic_metadata.Pages)
+    self:writeCustomToC(doc_settings, comicInfo.metadata.Pages)
 
     -- Save the updated metadata back to the metadata file
     custom_doc_settings:flushCustomMetadata(cbz_file)
