@@ -4,7 +4,7 @@ Plugin for KOReader to extract metadata from .cbz files as Custom Metadata
 @module koplugin.ComicMeta
 --]]
 --
-
+local Archiver = require("ffi/archiver")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
 local DocSettings = require("docsettings")
@@ -25,10 +25,6 @@ local ComicMeta = WidgetContainer:extend({
     name = "comicmeta",
     is_doc_only = false,
 })
-
-local ZIP_LIST = 'unzip -qql "%1"'
-local ZIP_EXTRACT_CONTENT = 'unzip -qqp "%1" "%2"'
-local ZIP_EXTRACT_FILE = 'unzip -qqo "%1" "%2" -d "%3"' -- overwrite
 
 function ComicMeta:onDispatcherRegisterActions()
     Dispatcher:registerAction(
@@ -56,11 +52,17 @@ end
 
 function ComicMeta:processFile(cbz_file)
     -- Extract ComicInfo.xml from the .cbz file
-    local handle = io.popen(T(ZIP_EXTRACT_CONTENT, cbz_file, "ComicInfo.xml"))
     local xml_content = nil
-    if handle then
-        xml_content = handle:read("*a")
-        handle:close()
+    local arc = Archiver.Reader:new()
+
+    if arc:open(cbz_file) then
+        for entry in arc:iterate() do
+            if entry.mode == "file" and entry.path == "ComicInfo.xml" then
+                xml_content = arc:extractToMemory(entry.index)
+                break
+            end
+        end
+        arc:close()
     end
 
     if not xml_content or #xml_content == 0 then
