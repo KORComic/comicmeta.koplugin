@@ -155,7 +155,7 @@ function ComicMeta:scanCbzFilesRecursive(folder)
                 for _, f in ipairs(sub_cbz) do
                     table.insert(cbz_files, f)
                 end
-            elseif entry:match("%.cbz$") then
+            elseif attr and attr.mode == "file" and entry:match("%.cbz$") then
                 logger.dbg("ComicMeta -> scanCbzFilesRecursive found cbz file", full_path)
 
                 table.insert(cbz_files, full_path)
@@ -206,10 +206,14 @@ function ComicMeta:processAllCbz(folder, recursive)
         cbz_files = self:scanCbzFilesRecursive(folder)
     else
         for file in lfs.dir(folder) do
-            if file:match("%.cbz$") then
-                logger.dbg("ComicMeta -> processAllCbz found cbz file", file)
+            if file ~= "." and file ~= ".." then
+                local attr = lfs.attributes(folder .. "/" .. file)
 
-                table.insert(cbz_files, folder .. "/" .. file)
+                if attr and attr.mode == "file" and file:match("%.cbz$") then
+                    logger.dbg("ComicMeta -> processAllCbz found cbz file", file)
+
+                    table.insert(cbz_files, folder .. "/" .. file)
+                end
             end
         end
     end
