@@ -5,6 +5,8 @@ describe("ComicMeta utility functions", function()
     local subdir = test_root .. "/sub"
     local cbz_file = test_root .. "/test.cbz"
     local sub_cbz_file = subdir .. "/subtest.cbz"
+    local cbr_file = test_root .. "/test.cbr"
+    local sub_cbr_file = subdir .. "/subtest.cbr"
     local ComicMeta = require("main")
 
     before_each(function()
@@ -21,23 +23,34 @@ describe("ComicMeta utility functions", function()
         local f2 = io.open(sub_cbz_file, "w")
         f2:write("dummy")
         f2:close()
+
+        -- Create dummy .cbr files
+        local f3 = io.open(cbr_file, "w")
+        f3:write("dummy")
+        f3:close()
+
+        local f4 = io.open(sub_cbr_file, "w")
+        f4:write("dummy")
+        f4:close()
     end)
 
     after_each(function()
         os.execute("rm -rf " .. string.format("%q", test_root))
     end)
 
-    it("scanCbzFilesRecursive finds .cbz files recursively", function()
-        local files = ComicMeta:scanCbzFilesRecursive(test_root)
+    it("scanComicFilesRecursive finds comic files recursively", function()
+        local files = ComicMeta:scanComicFilesRecursive(test_root)
 
-        assert.equals(2, #files)
+        assert.equals(4, #files)
     end)
 
-    it("scanCbzFilesRecursive returns empty for folder with no .cbz files", function()
+    it("scanComicFilesRecursive returns empty for folder with no comic files", function()
         os.remove(cbz_file)
         os.remove(sub_cbz_file)
+        os.remove(cbr_file)
+        os.remove(sub_cbr_file)
 
-        local files = ComicMeta:scanCbzFilesRecursive(test_root)
+        local files = ComicMeta:scanComicFilesRecursive(test_root)
 
         assert.equals(0, #files)
     end)
