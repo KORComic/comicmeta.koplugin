@@ -101,7 +101,7 @@ function ComicMeta:processFile(comic_file)
     local doc_settings = DocSettings:open(comic_file)
     if not custom_doc_settings or not doc_settings then
         UIManager:show(InfoMessage:new({
-            text = _("Failed to open DocSettings for file: ") .. comic_file,
+            text = T(_("Failed to open DocSettings for file: %1"), comic_file),
         }))
         return
     end
