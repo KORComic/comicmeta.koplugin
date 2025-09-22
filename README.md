@@ -1,6 +1,6 @@
 # comicmeta.koplugin
 
-Plugin for KOReader to extract metadata from .cbz files as Custom Metadata
+Plugin for KOReader to extract metadata from .cbz and .cbr files as Custom Metadata
 
 Metadata should be stored in a ComicInfo.xml at the root of the archive, as specified by [The Anansi Project](https://anansi-project.github.io/docs/category/schemas).
 

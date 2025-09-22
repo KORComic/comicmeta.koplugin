@@ -1,5 +1,5 @@
 --[[--
-Plugin for KOReader to extract metadata from .cbz files as Custom Metadata
+Plugin for KOReader to extract metadata from comic (.cbz and .cbr) files as Custom Metadata
 
 @module koplugin.ComicMeta
 --]]
@@ -53,8 +53,8 @@ function ComicMeta:addToMainMenu(menu_items)
     }
 end
 
-function ComicMeta:processFile(cbz_file)
-    local comicInfo, ok = ComicLib.ComicInfo:new(cbz_file)
+function ComicMeta:processFile(comic_file)
+    local comicInfo, ok = ComicLib.ComicInfo:new(comic_file)
     if not ok or comicInfo == nil then
         UIManager:show(InfoMessage:new({
             text = T(_("Failed to open CBZ file: %1"), cbz_file),
@@ -63,7 +63,7 @@ function ComicMeta:processFile(cbz_file)
         return
     end
 
-    logger.dbg("ComicMeta -> processFile comic_metadata", comicInfo.metadata)
+    logger.dbg("ComicMeta -> processFile comicInfo.metadata", comicInfo.metadata)
 
     -- Parse the XML content and create a metadata table
     local metadata = {
@@ -97,11 +97,11 @@ function ComicMeta:processFile(cbz_file)
     end
 
     -- Retrieve current metadata
-    local custom_doc_settings = DocSettings.openSettingsFile(cbz_file)
-    local doc_settings = DocSettings:open(cbz_file)
+    local custom_doc_settings = DocSettings.openSettingsFile(comic_file)
+    local doc_settings = DocSettings:open(comic_file)
     if not custom_doc_settings or not doc_settings then
         UIManager:show(InfoMessage:new({
-            text = _("Failed to open DocSettings for file: ") .. cbz_file,
+            text = _("Failed to open DocSettings for file: ") .. comic_file,
         }))
         return
     end
@@ -125,22 +125,22 @@ function ComicMeta:processFile(cbz_file)
     self:writeCustomToC(doc_settings, comicInfo.metadata.Pages)
 
     -- Save the updated metadata back to the metadata file
-    custom_doc_settings:flushCustomMetadata(cbz_file)
+    custom_doc_settings:flushCustomMetadata(comic_file)
     doc_settings:flush()
 
     -- Update the book info in the file manager
-    UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", cbz_file))
+    UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", comic_file))
     UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
 end
 
---- Recursively scans a folder and returns a list of all .cbz files found.
+--- Recursively scans a folder and returns a list of all comic files found.
 ---
 -- @param folder string: The folder to scan.
--- @return table: List of .cbz file paths.
-function ComicMeta:scanCbzFilesRecursive(folder)
-    logger.dbg("ComicMeta -> scanCbzFilesRecursive scanning folder", folder)
+-- @return table: List of comic file paths.
+function ComicMeta:scanComicFilesRecursive(folder)
+    logger.dbg("ComicMeta -> scanComicFilesRecursive scanning folder", folder)
 
-    local cbz_files = {}
+    local comic_files = {}
 
     for entry in lfs.dir(folder) do
         if entry ~= "." and entry ~= ".." then
@@ -148,26 +148,26 @@ function ComicMeta:scanCbzFilesRecursive(folder)
             local attr = lfs.attributes(full_path)
 
             if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
-                logger.dbg("ComicMeta -> scanCbzFilesRecursive entering subdirectory", full_path)
+                logger.dbg("ComicMeta -> scanComicFilesRecursive entering subdirectory", full_path)
 
-                local sub_cbz = self:scanCbzFilesRecursive(full_path)
+                local sub_comic_files = self:scanComicFilesRecursive(full_path)
 
-                for _, f in ipairs(sub_cbz) do
-                    table.insert(cbz_files, f)
+                for _, f in ipairs(sub_comic_files) do
+                    table.insert(comic_files, f)
                 end
-            elseif attr and attr.mode == "file" and entry:match("%.cbz$") then
-                logger.dbg("ComicMeta -> scanCbzFilesRecursive found cbz file", full_path)
+            elseif attr and attr.mode == "file" and (entry:match("%.cbz$") or entry:match("%.cbr$")) then
+                logger.dbg("ComicMeta -> scanComicFilesRecursive found comic file", full_path)
 
-                table.insert(cbz_files, full_path)
+                table.insert(comic_files, full_path)
             end
         end
     end
 
-    if #cbz_files == 0 then
-        logger.dbg("ComicMeta -> scanCbzFilesRecursive no cbz files found")
+    if #comic_files == 0 then
+        logger.dbg("ComicMeta -> scanComicFilesRecursive no comic files found")
     end
 
-    return cbz_files
+    return comic_files
 end
 
 --- Checks if a folder contains any subdirectories.
@@ -193,23 +193,23 @@ function ComicMeta:hasSubdirectories(folder)
     return false
 end
 
---- Processes all .cbz files in a folder, optionally recursively.
+--- Processes all comic files in a folder, optionally recursively.
 ---
 -- @param folder string: The folder to process.
 -- @param recursive boolean: Whether to process subfolders recursively.
-function ComicMeta:processAllCbz(folder, recursive)
-    logger.dbg("ComicMeta -> processAllCbz processing folder", folder, "recursive:", recursive)
+function ComicMeta:processAllComics(folder, recursive)
+    logger.dbg("ComicMeta -> processAllComics processing folder", folder, "recursive:", recursive)
 
-    local cbz_files = {}
+    local comic_files = {}
 
     if recursive then
-        cbz_files = self:scanCbzFilesRecursive(folder)
+        comic_files = self:scanComicFilesRecursive(folder)
     else
         for file in lfs.dir(folder) do
             if file ~= "." and file ~= ".." then
                 local attr = lfs.attributes(folder .. "/" .. file)
 
-                if attr and attr.mode == "file" and file:match("%.cbz$") then
+                if attr and attr.mode == "file" and (file:match("%.cbz$") or file:match("%.cbr$")) then
                     logger.dbg("ComicMeta -> processAllCbz found cbz file", file)
 
                     table.insert(cbz_files, folder .. "/" .. file)
@@ -218,18 +218,18 @@ function ComicMeta:processAllCbz(folder, recursive)
         end
     end
 
-    if #cbz_files == 0 then
-        logger.dbg("ComicMeta -> processAllCbz no cbz files found")
+    if #comic_files == 0 then
+        logger.dbg("ComicMeta -> processAllComics no comic files found")
 
         return
     end
 
-    logger.dbg("ComicMeta -> processAllCbz found", #cbz_files, ".cbz files to process")
+    logger.dbg("ComicMeta -> processAllComics found", #comic_files, "comic files to process")
 
-    for __, file_path in ipairs(cbz_files) do
+    for __, file_path in ipairs(comic_files) do
         local real_path = ffiUtil.realpath(file_path)
 
-        logger.dbg("ComicMeta -> processAllCbz processing file", real_path)
+        logger.dbg("ComicMeta -> processAllComics processing file", real_path)
 
         self:processFile(real_path)
     end
@@ -303,20 +303,20 @@ function ComicMeta:onComicMeta()
     local has_subdirs = self:hasSubdirectories(current_folder)
 
     if not has_subdirs then
-        self:processAllCbz(current_folder, false)
+        self:processAllComics(current_folder, false)
 
         return
     end
 
     UIManager:show(ConfirmBox:new({
-        text = _("Subfolders detected. Process all .cbz files recursively?"),
+        text = _("Subfolders detected. Process all comic files recursively?"),
         cancel_text = _("No"),
         cancel_callback = function()
-            self:processAllCbz(current_folder, false)
+            self:processAllComics(current_folder, false)
         end,
         ok_text = _("Yes"),
         ok_callback = function()
-            self:processAllCbz(current_folder, true)
+            self:processAllComics(current_folder, true)
         end,
     }))
 end

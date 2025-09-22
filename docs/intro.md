@@ -19,4 +19,4 @@ Follow these simple steps to get started:
 
 ## Usage
 
-When you open a directory, the plugin will ask whether to extract recursively. If you choose Yes, all CBZ files in that directory and its subdirectories will be processed. If you choose No, only the CBZ files in the current directory will be processed.
+When you open a directory, the plugin will ask whether to extract recursively. If you choose Yes, all comic files (`.cbz` and `.cbr`) in that directory and its subdirectories will be processed. If you choose No, only the comic files (`.cbz` and `.cbr`) in the current directory will be processed.
