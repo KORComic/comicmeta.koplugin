@@ -57,7 +57,7 @@ function ComicMeta:processFile(comic_file)
     local comicInfo, ok = ComicLib.ComicInfo:new(comic_file)
     if not ok or comicInfo == nil then
         UIManager:show(InfoMessage:new({
-            text = T(_("Failed to open CBZ file: %1"), cbz_file),
+            text = T(_("Failed to open comic file: %1"), comic_file),
         }))
 
         return
@@ -210,9 +210,9 @@ function ComicMeta:processAllComics(folder, recursive)
                 local attr = lfs.attributes(folder .. "/" .. file)
 
                 if attr and attr.mode == "file" and (file:match("%.cbz$") or file:match("%.cbr$")) then
-                    logger.dbg("ComicMeta -> processAllCbz found cbz file", file)
+                    logger.dbg("ComicMeta -> processAllComics found comic file", file)
 
-                    table.insert(cbz_files, folder .. "/" .. file)
+                    table.insert(comic_files, folder .. "/" .. file)
                 end
             end
         end
