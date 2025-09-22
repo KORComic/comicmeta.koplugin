@@ -57,7 +57,7 @@ function ComicMeta:processFile(comic_file)
     local comicInfo, ok = ComicLib.ComicInfo:new(comic_file)
     if not ok or comicInfo == nil then
         UIManager:show(InfoMessage:new({
-            text = T(_("Failed to open Comic file: {file}"), { file = comic_file }),
+            text = T(_("Failed to open CBZ file: %1"), cbz_file),
         }))
 
         return
