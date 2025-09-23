@@ -130,5 +130,4 @@ package.preload["gettext"] = function()
         return str
     end
 end
-package.preload["ffi/archiver"] = function()
-end
+package.preload["ffi/archiver"] = function() end
