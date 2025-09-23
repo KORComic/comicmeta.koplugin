@@ -55,8 +55,7 @@ package.preload["ui/trapper"] = function()
         dismissableRunInSubprocess = function()
             return true
         end,
-        setPausedText = function()
-        end,
+        setPausedText = function() end,
     }
 end
 package.preload["dispatcher"] = function()
