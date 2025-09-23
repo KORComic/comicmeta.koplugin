@@ -9,12 +9,12 @@ package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/lib/?.l
 package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/third_party/?/?.lua"
 
 local ComicLib = require("comiclib")
-local Trapper = require("ui/trapper")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
 local DocSettings = require("docsettings")
 local Event = require("ui/event")
 local FileManager = require("apps/filemanager/filemanager")
 local InfoMessage = require("ui/widget/infomessage")
+local Trapper = require("ui/trapper")
 local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local ffiUtil = require("ffi/util")
@@ -152,7 +152,7 @@ function ComicMeta:scanForComicFiles(folder, recursive)
         local attr = lfs.attributes(full_path)
 
         if not attr or (attr.mode ~= "directory" and attr.mode ~= "file") then
-            goto continue -- Skip if it's not a file or directory 
+            goto continue -- Skip if it's not a file or directory
         end
 
         if attr.mode == "directory" and recursive then
@@ -240,9 +240,16 @@ function ComicMeta:processAllComics(folder, recursive)
         local real_path = ffiUtil.realpath(file_path)
 
         logger.dbg("ComicMeta -> processAllComics processing file", real_path)
-        doNotAbort = Trapper:info(T(_([[
+        doNotAbort = Trapper:info(
+            T(
+                _([[
 Extracting metadata...
-%1 / %2]]), idx, #comic_files), true)
+%1 / %2]]),
+                idx,
+                #comic_files
+            ),
+            true
+        )
         if not doNotAbort then
             Trapper:clear()
             return
@@ -261,9 +268,15 @@ Extracting metadata...
     end
 
     Trapper:clear()
-    UIManager:show(InfoMessage:new{ text =  T(_([[
+    UIManager:show(InfoMessage:new({
+        text = T(
+            _([[
 Comic metadata extraction complete.
-Successfully extracted %1 / %2]]), successes, #comic_files) })
+Successfully extracted %1 / %2]]),
+            successes,
+            #comic_files
+        ),
+    }))
 end
 
 --- Writes a custom Table of Contents based on the Pages data from ComicInfo.xml
@@ -333,29 +346,33 @@ function ComicMeta:onComicMeta()
 
     local current_folder = FileManager.instance.file_chooser.path
 
-    Trapper:wrap(function ()
+    Trapper:wrap(function()
         local has_subdirs = self:hasSubdirectories(current_folder)
         local recursive = false
 
-        local go_on = Trapper:confirm(_([[
+        local go_on = Trapper:confirm(
+            _([[
 This will extract comic metadata from comics in the current directory.
 Once extraction has started, you can abort at any moment by tapping on the screen.
 
-This extraction may take time and use some battery power: you may wish to keep your device plugged in.]]
-        ), _("Cancel"), _("Continue"))
+This extraction may take time and use some battery power: you may wish to keep your device plugged in.]]),
+            _("Cancel"),
+            _("Continue")
+        )
         if not go_on then
             return
         end
 
         if has_subdirs then
-            recursive = Trapper:confirm(_([[
+            recursive = Trapper:confirm(
+                _([[
 Subfolders detected.
-Also extract comic metadata from comics in subdirectories?]]
-        ),
-            -- @translators Extract comic metadata only for comics in this directory.
-            _("Here only"),
-            -- @translators Extract comic metadata for comics in this directory as well as in subdirectories.
-            _("Here and under"))
+Also extract comic metadata from comics in subdirectories?]]),
+                -- @translators Extract comic metadata only for comics in this directory.
+                _("Here only"),
+                -- @translators Extract comic metadata for comics in this directory as well as in subdirectories.
+                _("Here and under")
+            )
         end
 
         Trapper:clear()
