@@ -38,11 +38,24 @@ package.preload["libs/libkoreader-lfs"] = function()
         end,
     }
 end
-package.preload["ui/widget/confirmbox"] = function()
+package.preload["ui/trapper"] = function()
     return {
-        new = function()
+        info = function()
             return {}
         end,
+        confirm = function()
+            return {}
+        end,
+        clear = function()
+            return {}
+        end,
+        wrap = function()
+            return {}
+        end,
+        dismissableRunInSubprocess = function()
+            return true
+        end,
+        setPausedText = function() end,
     }
 end
 package.preload["dispatcher"] = function()

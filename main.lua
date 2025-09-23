@@ -9,12 +9,12 @@ package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/lib/?.l
 package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/third_party/?/?.lua"
 
 local ComicLib = require("comiclib")
-local ConfirmBox = require("ui/widget/confirmbox")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
 local DocSettings = require("docsettings")
 local Event = require("ui/event")
 local FileManager = require("apps/filemanager/filemanager")
 local InfoMessage = require("ui/widget/infomessage")
+local Trapper = require("ui/trapper")
 local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local ffiUtil = require("ffi/util")
@@ -29,6 +29,7 @@ local ComicMeta = WidgetContainer:extend({
     is_doc_only = false,
 })
 
+--- Register our plugin setting
 function ComicMeta:onDispatcherRegisterActions()
     Dispatcher:registerAction(
         "comicmeta_action",
@@ -36,11 +37,13 @@ function ComicMeta:onDispatcherRegisterActions()
     )
 end
 
+--- Initiate our plugin
 function ComicMeta:init()
     self:onDispatcherRegisterActions()
     self.ui.menu:registerToMainMenu(self)
 end
 
+--- Add a main menu entry to the UI
 function ComicMeta:addToMainMenu(menu_items)
     menu_items.comic_meta = {
         text = _("Get Comic Meta"),
@@ -53,14 +56,15 @@ function ComicMeta:addToMainMenu(menu_items)
     }
 end
 
+--- Extract metadata from a comic archive
+---
+-- @param comic_file string: full path to the comic file
+-- @return boolean: true on success, false on failure
 function ComicMeta:processFile(comic_file)
     local comicInfo, ok = ComicLib.ComicInfo:new(comic_file)
     if not ok or comicInfo == nil then
-        UIManager:show(InfoMessage:new({
-            text = T(_("Failed to open comic file: %1"), comic_file),
-        }))
-
-        return
+        logger.dbg(_("Failed to open comic file"), comic_file)
+        return false
     end
 
     logger.dbg("ComicMeta -> processFile comicInfo.metadata", comicInfo.metadata)
@@ -100,10 +104,8 @@ function ComicMeta:processFile(comic_file)
     local custom_doc_settings = DocSettings.openSettingsFile(comic_file)
     local doc_settings = DocSettings:open(comic_file)
     if not custom_doc_settings or not doc_settings then
-        UIManager:show(InfoMessage:new({
-            text = _("Failed to open DocSettings for file: ") .. comic_file,
-        }))
-        return
+        logger.dbg(T(_("Failed to open DocSettings for file: %1"), comic_file))
+        return false
     end
 
     -- Read the existing doc_props property
@@ -128,43 +130,53 @@ function ComicMeta:processFile(comic_file)
     custom_doc_settings:flushCustomMetadata(comic_file)
     doc_settings:flush()
 
-    -- Update the book info in the file manager
-    UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", comic_file))
-    UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
+    return true
 end
 
---- Recursively scans a folder and returns a list of all comic files found.
+--- Scans a folder and returns a list of all comic files found.
 ---
 -- @param folder string: The folder to scan.
+-- @param recursive boolean: Whether or not to scan recursively.
 -- @return table: List of comic file paths.
-function ComicMeta:scanComicFilesRecursive(folder)
-    logger.dbg("ComicMeta -> scanComicFilesRecursive scanning folder", folder)
+function ComicMeta:scanForComicFiles(folder, recursive)
+    logger.dbg("ComicMeta -> scanForComicFiles scanning folder", folder, "recursive:", recursive)
 
     local comic_files = {}
 
     for entry in lfs.dir(folder) do
-        if entry ~= "." and entry ~= ".." then
-            local full_path = folder .. "/" .. entry
-            local attr = lfs.attributes(full_path)
-
-            if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
-                logger.dbg("ComicMeta -> scanComicFilesRecursive entering subdirectory", full_path)
-
-                local sub_comic_files = self:scanComicFilesRecursive(full_path)
-
-                for _, f in ipairs(sub_comic_files) do
-                    table.insert(comic_files, f)
-                end
-            elseif attr and attr.mode == "file" and (entry:match("%.cbz$") or entry:match("%.cbr$")) then
-                logger.dbg("ComicMeta -> scanComicFilesRecursive found comic file", full_path)
-
-                table.insert(comic_files, full_path)
-            end
+        if entry == "." or entry == ".." then
+            goto continue
         end
+
+        local full_path = folder .. "/" .. entry
+        local attr = lfs.attributes(full_path)
+
+        if not attr or (attr.mode ~= "directory" and attr.mode ~= "file") then
+            goto continue -- Skip if it's not a file or directory
+        end
+
+        if attr.mode == "directory" and recursive then
+            if entry:match("%.sdr$") then -- Skip sidecar folders
+                goto continue
+            end
+
+            logger.dbg("ComicMeta -> scanForComicFiles entering subdirectory", full_path)
+
+            local sub_comic_files = self:scanForComicFiles(full_path, recursive)
+
+            for _, f in ipairs(sub_comic_files) do
+                table.insert(comic_files, f)
+            end
+        elseif attr.mode == "file" and (entry:match("%.cbz$") or entry:match("%.cbr$")) then
+            logger.dbg("ComicMeta -> scanForComicFiles found comic file", full_path)
+
+            table.insert(comic_files, full_path)
+        end
+        ::continue::
     end
 
     if #comic_files == 0 then
-        logger.dbg("ComicMeta -> scanComicFilesRecursive no comic files found")
+        logger.dbg("ComicMeta -> scanForComicFiles no comic files found")
     end
 
     return comic_files
@@ -178,14 +190,17 @@ function ComicMeta:hasSubdirectories(folder)
     logger.dbg("ComicMeta -> hasSubdirectories checking folder", folder)
 
     for entry in lfs.dir(folder) do
-        if entry ~= "." and entry ~= ".." then
-            local attr = lfs.attributes(folder .. "/" .. entry)
-
-            if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
-                logger.dbg("ComicMeta -> hasSubdirectories found subdirectory", entry)
-                return true
-            end
+        if entry == "." or entry == ".." then
+            goto continue
         end
+
+        local attr = lfs.attributes(folder .. "/" .. entry)
+
+        if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
+            logger.dbg("ComicMeta -> hasSubdirectories found subdirectory", entry)
+            return true
+        end
+        ::continue::
     end
 
     logger.dbg("ComicMeta -> hasSubdirectories no subdirectories found")
@@ -200,39 +215,68 @@ end
 function ComicMeta:processAllComics(folder, recursive)
     logger.dbg("ComicMeta -> processAllComics processing folder", folder, "recursive:", recursive)
 
-    local comic_files = {}
+    Trapper:setPausedText(_("Do you want to abort extraction?"), _("Abort"), _("Don't abort"))
 
-    if recursive then
-        comic_files = self:scanComicFilesRecursive(folder)
-    else
-        for file in lfs.dir(folder) do
-            if file ~= "." and file ~= ".." then
-                local attr = lfs.attributes(folder .. "/" .. file)
-
-                if attr and attr.mode == "file" and (file:match("%.cbz$") or file:match("%.cbr$")) then
-                    logger.dbg("ComicMeta -> processAllComics found comic file", file)
-
-                    table.insert(comic_files, folder .. "/" .. file)
-                end
-            end
-        end
+    local doNotAbort = Trapper:info(_("Scanning for comics..."))
+    if not doNotAbort then
+        Trapper:clear()
+        return
     end
+    ffiUtil.sleep(2) -- Pause so that the user can see it
+
+    local comic_files = self:scanForComicFiles(folder, recursive)
 
     if #comic_files == 0 then
         logger.dbg("ComicMeta -> processAllComics no comic files found")
-
+        Trapper:info(_("No comics found."))
         return
     end
 
     logger.dbg("ComicMeta -> processAllComics found", #comic_files, "comic files to process")
 
-    for __, file_path in ipairs(comic_files) do
+    local successes = 0
+
+    for idx, file_path in ipairs(comic_files) do
         local real_path = ffiUtil.realpath(file_path)
 
         logger.dbg("ComicMeta -> processAllComics processing file", real_path)
+        doNotAbort = Trapper:info(
+            T(
+                _([[
+Extracting metadata...
+%1 / %2]]),
+                idx,
+                #comic_files
+            ),
+            true
+        )
+        if not doNotAbort then
+            Trapper:clear()
+            return
+        end
 
-        self:processFile(real_path)
+        local complete, success = Trapper:dismissableRunInSubprocess(function()
+            return self:processFile(real_path)
+        end)
+        if complete and success then
+            successes = successes + 1
+
+            -- Update the book info in the file manager
+            UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", real_path))
+            UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
+        end
     end
+
+    Trapper:clear()
+    UIManager:show(InfoMessage:new({
+        text = T(
+            _([[
+Comic metadata extraction complete.
+Successfully extracted %1 / %2]]),
+            successes,
+            #comic_files
+        ),
+    }))
 end
 
 --- Writes a custom Table of Contents based on the Pages data from ComicInfo.xml
@@ -294,31 +338,48 @@ function ComicMeta:writeCustomToC(doc_settings, pages_data)
     doc_settings:saveSetting("handmade_toc_edit_enabled", false)
 end
 
+--- This is basically the plugin's main()
 function ComicMeta:onComicMeta()
     if not FileManager.instance then
         return
     end
 
     local current_folder = FileManager.instance.file_chooser.path
-    local has_subdirs = self:hasSubdirectories(current_folder)
 
-    if not has_subdirs then
-        self:processAllComics(current_folder, false)
+    Trapper:wrap(function()
+        local has_subdirs = self:hasSubdirectories(current_folder)
+        local recursive = false
 
-        return
-    end
+        local go_on = Trapper:confirm(
+            _([[
+This will extract comic metadata from comics in the current directory.
+Once extraction has started, you can abort at any moment by tapping on the screen.
 
-    UIManager:show(ConfirmBox:new({
-        text = _("Subfolders detected. Process all comic files recursively?"),
-        cancel_text = _("No"),
-        cancel_callback = function()
-            self:processAllComics(current_folder, false)
-        end,
-        ok_text = _("Yes"),
-        ok_callback = function()
-            self:processAllComics(current_folder, true)
-        end,
-    }))
+Standby will be prevented during extraction and may take time.
+It's recommended to keep your device plugged in, as this can use some battery power.]]),
+            _("Cancel"),
+            _("Continue")
+        )
+        if not go_on then
+            return
+        end
+
+        if has_subdirs then
+            recursive = Trapper:confirm(
+                _([[
+Subfolders detected.
+Also extract comic metadata from comics in subdirectories?]]),
+                -- @translators Extract comic metadata only for comics in this directory.
+                _("Here only"),
+                -- @translators Extract comic metadata for comics in this directory as well as in subdirectories.
+                _("Here and under")
+            )
+        end
+
+        Trapper:clear()
+
+        self:processAllComics(current_folder, recursive)
+    end)
 end
 
 return ComicMeta
