@@ -17,7 +17,6 @@ jobs:
       - name: Run Busted
         uses: lunarmodules/busted@v2.2.0
         with:
-            args: test
+          args: test
         env:
           LUA_PATH: "./?.lua;./lib/?.lua;./lib/?/?.lua;./lib/comiclib/lib/?.lua;./lib/comiclib/third_party/?/?.lua"
-
