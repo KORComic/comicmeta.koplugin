@@ -38,21 +38,25 @@ describe("ComicMeta utility functions", function()
         os.execute("rm -rf " .. string.format("%q", test_root))
     end)
 
-    it("scanComicFilesRecursive finds comic files recursively", function()
-        local files = ComicMeta:scanComicFilesRecursive(test_root)
+    it("scanForComicFiles finds comic files", function()
+        local files = ComicMeta:scanForComicFiles(test_root, true)
+        local localFiles = ComicMeta:scanForComicFiles(test_root, false)
 
         assert.equals(4, #files)
+        assert.equals(2, #localFiles)
     end)
 
-    it("scanComicFilesRecursive returns empty for folder with no comic files", function()
+    it("scanForComicFiles returns empty for folder with no comic files", function()
         os.remove(cbz_file)
         os.remove(sub_cbz_file)
         os.remove(cbr_file)
         os.remove(sub_cbr_file)
 
-        local files = ComicMeta:scanComicFilesRecursive(test_root)
+        local files = ComicMeta:scanForComicFiles(test_root, true)
+        local localFiles = ComicMeta:scanForComicFiles(test_root, false)
 
         assert.equals(0, #files)
+        assert.equals(0, #localFiles)
     end)
 
     it("hasSubdirectories detects subdirectories", function()
