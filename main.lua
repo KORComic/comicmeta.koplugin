@@ -355,7 +355,8 @@ function ComicMeta:onComicMeta()
 This will extract comic metadata from comics in the current directory.
 Once extraction has started, you can abort at any moment by tapping on the screen.
 
-This extraction may take time and use some battery power: you may wish to keep your device plugged in.]]),
+Standby will be prevented during extraction and may take time.
+It's recommended to keep your device plugged in, as this can use some battery power.]]),
             _("Cancel"),
             _("Continue")
         )
