@@ -130,10 +130,6 @@ function ComicMeta:processFile(comic_file)
     custom_doc_settings:flushCustomMetadata(comic_file)
     doc_settings:flush()
 
-    -- Update the book info in the file manager
-    UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", comic_file))
-    UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
-
     return true
 end
 
@@ -257,6 +253,10 @@ Extracting metadata...
         end)
         if complete and success then
             successes = successes + 1
+
+            -- Update the book info in the file manager
+            UIManager:broadcastEvent(Event:new("InvalidateMetadataCache", real_path))
+            UIManager:broadcastEvent(Event:new("BookMetadataChanged"))
         end
     end
 
