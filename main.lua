@@ -156,7 +156,7 @@ function ComicMeta:scanForComicFiles(folder, recursive)
         end
 
         if attr.mode == "directory" and recursive then
-            if entry:match("%.sdr$") then -- Skip sidecar folders
+            if entry:lower():match("%.sdr$") then -- Skip sidecar folders
                 goto continue
             end
 
@@ -167,7 +167,7 @@ function ComicMeta:scanForComicFiles(folder, recursive)
             for _, f in ipairs(sub_comic_files) do
                 table.insert(comic_files, f)
             end
-        elseif attr.mode == "file" and (entry:match("%.cbz$") or entry:match("%.cbr$")) then
+        elseif attr.mode == "file" and (entry:lower():match("%.cbz$") or entry:lower():match("%.cbr$")) then
             logger.dbg("ComicMeta -> scanForComicFiles found comic file", full_path)
 
             table.insert(comic_files, full_path)
@@ -196,7 +196,7 @@ function ComicMeta:hasSubdirectories(folder)
 
         local attr = lfs.attributes(folder .. "/" .. entry)
 
-        if attr and attr.mode == "directory" and not entry:match("%.sdr$") then
+        if attr and attr.mode == "directory" and not entry:lower():match("%.sdr$") then
             logger.dbg("ComicMeta -> hasSubdirectories found subdirectory", entry)
             return true
         end
