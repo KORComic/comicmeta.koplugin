@@ -33,7 +33,7 @@ local ComicMeta = WidgetContainer:extend({
 function ComicMeta:onDispatcherRegisterActions()
     Dispatcher:registerAction(
         "comicmeta_action",
-        { category = "none", event = "ComicMeta", title = _("Get Comic Meta"), general = true }
+        { category = "none", event = "ComicMeta", title = _("Extract Comic Meta"), general = true }
     )
 end
 
@@ -46,7 +46,7 @@ end
 --- Add a main menu entry to the UI
 function ComicMeta:addToMainMenu(menu_items)
     menu_items.comic_meta = {
-        text = _("Get Comic Meta"),
+        text = _("Extract Comic Meta"),
         -- in which menu this should be appended
         sorting_hint = "more_tools",
         -- a callback when tapping
