@@ -1,0 +1,21 @@
+name: Publish plugin
+on:
+  release:
+    types: [published]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Create ZIP archive
+        run: |
+          mkdir -p comicmeta.koplugin
+          cp -r lib comicmeta.koplugin/lib
+          cp LICENSE.md README.md main.lua _meta.lua comicmeta.koplugin/
+          zip -r comicmeta.koplugin.zip comicmeta.koplugin
+      - name: Upload Release Artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.event.release.tag_name }} comicmeta.koplugin.zip
