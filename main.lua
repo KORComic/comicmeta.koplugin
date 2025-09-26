@@ -124,11 +124,13 @@ function ComicMeta:processFile(comic_file)
     -- Write the updated doc_props property back to the DocSettings
     custom_doc_settings:saveSetting("custom_props", doc_props)
 
-    self:writeCustomToC(doc_settings, comicInfo.metadata.Pages)
+    local has_toc = self:writeCustomToC(doc_settings, comicInfo.metadata.Pages)
 
     -- Save the updated metadata back to the metadata file
     custom_doc_settings:flushCustomMetadata(comic_file)
-    doc_settings:flush()
+    if has_toc then
+        doc_settings:flush()
+    end
 
     return true
 end
@@ -297,11 +299,12 @@ end
 --
 -- @param doc_settings: The DocSettings object for the file, this must be DocSettings:open(file)
 -- @param pages_data: The Pages data from the parsed ComicInfo.xml
+-- @return boolean: true if ToC was written, false if not
 function ComicMeta:writeCustomToC(doc_settings, pages_data)
     if not pages_data or not pages_data.Page then
         logger.dbg("ComicMeta -> writeCustomToC: No pages data found")
 
-        return
+        return false
     end
 
     logger.dbg("ComicMeta -> writeCustomToC writing ToC from pages", #pages_data.Page)
@@ -328,7 +331,7 @@ function ComicMeta:writeCustomToC(doc_settings, pages_data)
 
     if #toc == 0 then
         logger.dbg("ComicMeta -> writeCustomToC: No bookmarked pages found")
-        return
+        return false
     end
 
     logger.dbg("ComicMeta -> writeCustomToC: Created ToC with", #toc, "entries")
@@ -336,6 +339,7 @@ function ComicMeta:writeCustomToC(doc_settings, pages_data)
     doc_settings:saveSetting("handmade_toc", toc)
     doc_settings:saveSetting("handmade_toc_enabled", true)
     doc_settings:saveSetting("handmade_toc_edit_enabled", false)
+    return true
 end
 
 --- This is basically the plugin's main()
