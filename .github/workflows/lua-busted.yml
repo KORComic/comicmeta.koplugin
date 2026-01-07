@@ -15,7 +15,7 @@ jobs:
         with:
           submodules: recursive
       - name: Run Busted
-        uses: lunarmodules/busted@v2.2.0
+        uses: lunarmodules/busted@v2.3.0
         with:
           args: test
         env:
