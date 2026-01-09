@@ -74,7 +74,7 @@ function ComicMeta:processFile(comic_file)
         title = comicInfo.metadata.Title,
         authors = comicInfo.metadata.Writer,
         series = comicInfo.metadata.Series,
-        series_index = comicInfo.metadata.Number,
+        series_index = tonumber(comicInfo.metadata.Number),
         description = comicInfo.metadata.Summary,
         keywords = comicInfo.metadata.Tags,
         language = comicInfo.metadata.LanguageISO,
@@ -95,6 +95,8 @@ function ComicMeta:processFile(comic_file)
             end
 
             metadata[key] = out
+        elseif key == "series_index" then
+            metadata[key] = value
         else
             metadata[key] = util.htmlEntitiesToUtf8(value)
         end
