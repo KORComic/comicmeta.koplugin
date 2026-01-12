@@ -74,7 +74,7 @@ function ComicMeta:processFile(comic_file)
         title = comicInfo.metadata.Title,
         authors = comicInfo.metadata.Writer,
         series = comicInfo.metadata.Series,
-        series_index = tonumber(comicInfo.metadata.Number),
+        series_index = tonumber(comicInfo.metadata.Number) or comicInfo.metadata.Number,
         description = comicInfo.metadata.Summary,
         keywords = comicInfo.metadata.Tags,
         language = comicInfo.metadata.LanguageISO,
