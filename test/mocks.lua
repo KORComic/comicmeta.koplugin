@@ -18,16 +18,20 @@ package.preload["libs/libkoreader-lfs"] = function()
             end
         end,
         attributes = function(path)
-            -- Escape double quotes in path to prevent command injection
-            local safe_path = path:gsub('"', '\\"')
-            local stat = io.popen(string.format('stat -c "%%F" "%s"', safe_path))
-            if stat then
-                local mode = stat:read("*l")
-                stat:close()
-                if mode == "directory" then
-                    return { mode = "directory" }
-                else
-                    return { mode = "file" }
+            local handle = io.popen(string.format('test -d %q && echo "directory" || test -f %q && echo "file"', path, path))
+            if handle then
+                local result = handle:read("*l")
+                handle:close()
+                if result == "directory" then
+                    return { mode = "directory", modification = os.time(), size = 0 }
+                elseif result == "file" then
+                    local f = io.open(path, "rb")
+                    local size = 0
+                    if f then
+                        size = f:seek("end") or 0
+                        f:close()
+                    end
+                    return { mode = "file", modification = os.time(), size = size }
                 end
             end
             return nil
@@ -123,6 +127,8 @@ end
 package.preload["logger"] = function()
     return {
         dbg = function(...) end,
+        warn = function(...) end,
+        err = function(...) end,
     }
 end
 package.preload["util"] = function()
@@ -144,3 +150,25 @@ package.preload["gettext"] = function()
     end
 end
 package.preload["ffi/archiver"] = function() end
+package.preload["ui/widget/menu"] = function()
+    return {
+        new = function(self, args)
+            return args
+        end,
+    }
+end
+package.preload["device"] = function()
+    return {
+        screen = {
+            getWidth = function() return 800 end,
+            getHeight = function() return 600 end,
+        },
+    }
+end
+package.preload["ui/widget/buttondialog"] = function()
+    return {
+        new = function(self, args)
+            return args
+        end,
+    }
+end
