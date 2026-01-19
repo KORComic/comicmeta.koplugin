@@ -476,12 +476,10 @@ function ComicMeta:_compareFilesForSort(file_path_a, file_path_b, base_folder, m
     local filename_a = file_path_a:match("([^/]+)$") or ""
     local filename_b = file_path_b:match("([^/]+)$") or ""
 
-    local comparison_result
+    local comparison_result = filename_a:lower() < filename_b:lower()
     local values_are_equal = false
 
-    if sort_type == "name" then
-        comparison_result = filename_a:lower() < filename_b:lower()
-    elseif sort_type == "date" then
+    if sort_type == "date" then
         local modification_time_a = tonumber(metadata_a.modification) or 0
         local modification_time_b = tonumber(metadata_b.modification) or 0
 
@@ -520,13 +518,16 @@ end
 function ComicMeta:_sortComicFiles(comic_files, base_folder, metadata_map, sort_type, sort_order)
     local self_ref = self
     table.sort(comic_files, function(file_a, file_b)
+        if file_a == file_b then
+            return false
+        end
         local success, result = pcall(function()
             return self_ref:_compareFilesForSort(file_a, file_b, base_folder, metadata_map, sort_type, sort_order)
         end)
 
-        if not success then
+        if not success or result == nil then
             logger.warn("ComicMeta: Sort comparison failed:", result)
-            return false
+            return file_a < file_b
         end
 
         return result
