@@ -151,6 +151,7 @@ package.preload["ffi/util"] = function()
         realpath = function(path)
             return path
         end,
+        sleep = function() end,
     }
 end
 package.preload["logger"] = function()

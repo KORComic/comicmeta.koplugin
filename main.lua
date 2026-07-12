@@ -314,7 +314,8 @@ end
 ---
 -- @param folder string: The folder to process.
 -- @param recursive boolean: Whether to process subfolders recursively.
-function ComicMeta:processDirectory(folder, recursive)
+-- @param only_new_files boolean: Whether to skip files already extracted.
+function ComicMeta:processDirectory(folder, recursive, only_new_files)
     logger.dbg("ComicMeta -> processDirectory processing folder", folder, "recursive:", recursive)
 
     Trapper:setPausedText(_("Do you want to abort extraction?"), _("Abort"), _("Don't abort"))
@@ -327,6 +328,9 @@ function ComicMeta:processDirectory(folder, recursive)
     ffiUtil.sleep(2) -- Pause so that the user can see it
 
     local comic_files = self:scanForComicFiles(folder, recursive)
+    if only_new_files then
+        comic_files = self:getExtractionRegistry():filterNotExtracted(comic_files)
+    end
     self:processFiles(comic_files)
 end
 
@@ -493,11 +497,23 @@ Do you want to process the full directory or only a selection of files?]]),
             _("Full directory")
         )
 
+        local only_new_files = false
+        if full_directory then
+            only_new_files = not Trapper:confirm(
+                _([[
+Do you want to process all comics or only comics whose metadata has not been extracted yet?]]),
+                -- @translators Extract comic metadata only for comics not extracted yet.
+                _("New only"),
+                -- @translators Extract comic metadata for every comic, including those already extracted.
+                _("All comics")
+            )
+        end
+
         Trapper:clear()
 
         if full_directory then
             -- Process entire directory
-            self:processDirectory(current_folder, recursive)
+            self:processDirectory(current_folder, recursive, only_new_files)
         else
             -- Show file selector with files from current and subdirectories if recursive
             self:showFileSelector(current_folder, recursive)

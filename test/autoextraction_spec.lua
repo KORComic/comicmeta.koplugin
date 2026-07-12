@@ -70,6 +70,26 @@ describe("ComicMeta automatic extraction", function()
         assert.is_nil(processed_files)
     end)
 
+    it("processes only new files when a directory scan skips extracted ones", function()
+        local new_file = test_root .. "/new.cbz"
+        writeFile(new_file, "new comic content")
+        ComicMeta.extraction_registry:markExtracted(comic_file)
+
+        ComicMeta:processDirectory(test_root, false, true)
+
+        assert.are.same({ new_file }, processed_files)
+    end)
+
+    it("processes every file when a directory scan rescans all", function()
+        local new_file = test_root .. "/new.cbz"
+        writeFile(new_file, "new comic content")
+        ComicMeta.extraction_registry:markExtracted(comic_file)
+
+        ComicMeta:processDirectory(test_root, false, false)
+
+        assert.are.same({ comic_file, new_file }, processed_files)
+    end)
+
     it("marks files as extracted after processing them", function()
         ComicMeta.processFiles = original_processFiles
 
