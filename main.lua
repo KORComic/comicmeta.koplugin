@@ -348,13 +348,16 @@ function ComicMeta:processFiles(comic_files)
         local real_path = ffiUtil.realpath(file_path)
 
         logger.dbg("ComicMeta -> processFiles processing file", real_path)
-        local doNotAbort = Trapper:info( -- Ajout de 'local' ici
+        local filename = file_path:match("([^/]+)$")
+        local doNotAbort = Trapper:info(
             T(
                 _([[
 Extracting metadata...
-%1 / %2]]),
+%1 / %2
+%3]]),
                 idx,
-                #comic_files
+                #comic_files,
+                filename
             ),
             true
         )
