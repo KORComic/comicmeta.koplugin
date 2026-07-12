@@ -63,8 +63,8 @@ package.preload["ui/trapper"] = function()
         clear = function()
             return {}
         end,
-        wrap = function()
-            return {}
+        wrap = function(_, func)
+            return func()
         end,
         dismissableRunInSubprocess = function()
             return true
@@ -196,6 +196,21 @@ package.preload["gettext"] = function()
         return str
     end
 end
+G_reader_settings = {
+    data = {},
+    isTrue = function(self, key)
+        return self.data[key] == true
+    end,
+    toggle = function(self, key)
+        self.data[key] = not self.data[key]
+    end,
+    makeTrue = function(self, key)
+        self.data[key] = true
+    end,
+    makeFalse = function(self, key)
+        self.data[key] = false
+    end,
+}
 package.preload["ffi/archiver"] = function() end
 package.preload["ui/widget/menu"] = function()
     return {

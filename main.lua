@@ -22,6 +22,7 @@ local ComicLib = require("comiclib")
 local Dispatcher = require("dispatcher")
 local DocSettings = require("docsettings")
 local Event = require("ui/event")
+local ExtractionRegistry = require("extractionregistry")
 local FileManager = require("apps/filemanager/filemanager")
 local InfoMessage = require("ui/widget/infomessage")
 local Menu = require("ui/widget/menu")
@@ -37,6 +38,8 @@ local T = ffiUtil.template
 local _ = require("gettext")
 
 -- ... reste du code inchangé
+
+local AUTO_EXTRACTION_SETTING = "comicmeta_auto_extraction"
 
 local ComicMeta = WidgetContainer:extend({
     name = "comicmeta",
@@ -68,6 +71,50 @@ function ComicMeta:addToMainMenu(menu_items)
             self:onComicMeta()
         end,
     }
+    menu_items.comic_meta_auto_extraction = {
+        text = _("Extract comic metadata automatically"),
+        sorting_hint = "more_tools",
+        checked_func = function()
+            return self:isAutoExtractionEnabled()
+        end,
+        callback = function()
+            G_reader_settings:toggle(AUTO_EXTRACTION_SETTING)
+        end,
+    }
+end
+
+--- Tell whether automatic extraction on folder change is enabled
+function ComicMeta:isAutoExtractionEnabled()
+    return G_reader_settings:isTrue(AUTO_EXTRACTION_SETTING)
+end
+
+--- Get the persistent registry of already extracted files
+function ComicMeta:getExtractionRegistry()
+    if not self.extraction_registry then
+        self.extraction_registry = ExtractionRegistry:new()
+    end
+    return self.extraction_registry
+end
+
+--- Extract metadata for comics not seen before whenever the file browser
+--- enters a folder. Stays silent when the folder holds nothing new.
+function ComicMeta:onPathChanged(folder_path)
+    if not folder_path or self.auto_extraction_running or not self:isAutoExtractionEnabled() then
+        return
+    end
+
+    local comic_files = self:scanForComicFiles(folder_path, false)
+    local files_to_extract = self:getExtractionRegistry():filterNotExtracted(comic_files)
+    if #files_to_extract == 0 then
+        return
+    end
+
+    self.auto_extraction_running = true
+    Trapper:wrap(function()
+        Trapper:setPausedText(_("Do you want to abort extraction?"), _("Abort"), _("Don't abort"))
+        self:processFiles(files_to_extract)
+        self.auto_extraction_running = false
+    end)
 end
 
 --- Extract metadata from a comic archive
@@ -244,7 +291,6 @@ function ComicMeta:processDirectory(folder, recursive)
 
     local comic_files = self:scanForComicFiles(folder, recursive)
     self:processFiles(comic_files)
-
 end
 
 function ComicMeta:processFiles(comic_files)
@@ -261,7 +307,7 @@ function ComicMeta:processFiles(comic_files)
         local real_path = ffiUtil.realpath(file_path)
 
         logger.dbg("ComicMeta -> processFiles processing file", real_path)
-        local doNotAbort = Trapper:info(  -- Ajout de 'local' ici
+        local doNotAbort = Trapper:info( -- Ajout de 'local' ici
             T(
                 _([[
 Extracting metadata...
@@ -279,6 +325,9 @@ Extracting metadata...
         local complete, success = Trapper:dismissableRunInSubprocess(function()
             return self:processFile(real_path)
         end)
+        if complete then
+            self:getExtractionRegistry():markExtracted(real_path)
+        end
         if complete and success then
             successes = successes + 1
 
@@ -634,7 +683,7 @@ function ComicMeta:_createSortDialog(on_sort_selected)
         end
     end
 
-    return ButtonDialog:new{
+    return ButtonDialog:new({
         title = _("Sort by"),
         buttons = {
             {
@@ -650,7 +699,7 @@ function ComicMeta:_createSortDialog(on_sort_selected)
                 { text = _("Size ↓"), callback = makeSortCallback("size", "desc") },
             },
         },
-    }
+    })
 end
 
 --- Display the file selector menu for choosing comic files to process.
@@ -672,17 +721,19 @@ function ComicMeta:showFileSelector(folder, recursive)
     local current_sort_order = "asc"
 
     self:_sortComicFiles(comic_files, folder, metadata_map, current_sort_type, current_sort_order)
-    local file_items = self:_buildFileSelectorItems(comic_files, folder, recursive, current_sort_type, current_sort_order)
+    local file_items =
+        self:_buildFileSelectorItems(comic_files, folder, recursive, current_sort_type, current_sort_order)
 
     local file_menu
     local self_ref = self
 
     local function refreshMenuAfterSort()
-        file_items = self_ref:_buildFileSelectorItems(comic_files, folder, recursive, current_sort_type, current_sort_order)
+        file_items =
+            self_ref:_buildFileSelectorItems(comic_files, folder, recursive, current_sort_type, current_sort_order)
         file_menu:switchItemTable(nil, file_items)
     end
 
-    file_menu = Menu:new{
+    file_menu = Menu:new({
         title = _("Select files"),
         item_table = file_items,
         is_borderless = true,
@@ -732,7 +783,7 @@ function ComicMeta:showFileSelector(folder, recursive)
             self_ref:_toggleFileSelection(item, folder, recursive)
             menu:updateItems()
         end,
-    }
+    })
 
     UIManager:show(file_menu)
 end
