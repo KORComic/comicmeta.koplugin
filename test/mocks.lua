@@ -18,12 +18,22 @@ package.preload["libs/libkoreader-lfs"] = function()
             end
         end,
         attributes = function(path)
-            local handle = io.popen(string.format('test -d %q && echo "directory" || test -f %q && echo "file"', path, path))
+            local function modificationTime()
+                local stat = io.popen(string.format("stat -c %%Y %q 2>/dev/null || stat -f %%m %q", path, path))
+                if not stat then
+                    return os.time()
+                end
+                local mtime = tonumber(stat:read("*l"))
+                stat:close()
+                return mtime or os.time()
+            end
+            local handle =
+                io.popen(string.format('test -d %q && echo "directory" || test -f %q && echo "file"', path, path))
             if handle then
                 local result = handle:read("*l")
                 handle:close()
                 if result == "directory" then
-                    return { mode = "directory", modification = os.time(), size = 0 }
+                    return { mode = "directory", modification = modificationTime(), size = 0 }
                 elseif result == "file" then
                     local f = io.open(path, "rb")
                     local size = 0
@@ -31,7 +41,7 @@ package.preload["libs/libkoreader-lfs"] = function()
                         size = f:seek("end") or 0
                         f:close()
                     end
-                    return { mode = "file", modification = os.time(), size = size }
+                    return { mode = "file", modification = modificationTime(), size = size }
                 end
             end
             return nil
@@ -142,6 +152,43 @@ package.preload["util"] = function()
         trim = function(str)
             return str
         end,
+        partialMD5 = function(filepath)
+            if not filepath then
+                return nil
+            end
+            local file = io.open(filepath, "rb")
+            if not file then
+                return nil
+            end
+            local content = file:read("*a")
+            file:close()
+            return "fakemd5:" .. content
+        end,
+    }
+end
+package.preload["luasettings"] = function()
+    local stores = {}
+    return {
+        open = function(_, file_path)
+            stores[file_path] = stores[file_path] or {}
+            local data = stores[file_path]
+            return {
+                readSetting = function(_, key)
+                    return data[key]
+                end,
+                saveSetting = function(_, key, value)
+                    data[key] = value
+                end,
+                flush = function() end,
+            }
+        end,
+    }
+end
+package.preload["datastorage"] = function()
+    return {
+        getSettingsDir = function()
+            return "/tmp/comicmeta_test_settings"
+        end,
     }
 end
 package.preload["gettext"] = function()
@@ -160,8 +207,12 @@ end
 package.preload["device"] = function()
     return {
         screen = {
-            getWidth = function() return 800 end,
-            getHeight = function() return 600 end,
+            getWidth = function()
+                return 800
+            end,
+            getHeight = function()
+                return 600
+            end,
         },
     }
 end
