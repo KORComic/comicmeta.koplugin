@@ -86,7 +86,26 @@ package.preload["docsettings"] = function()
                 flushCustomMetadata = function() end,
             }
         end,
+        findCustomMetadataFile = function(_, filepath)
+            local marker_path = filepath .. ".custom_metadata"
+            local marker = io.open(marker_path, "r")
+            if marker then
+                marker:close()
+                return marker_path
+            end
+            return nil
+        end,
     }
+end
+package.preload["bookinfomanager"] = function()
+    local BookInfoManager = {
+        extract_calls = {},
+    }
+    function BookInfoManager:extractBookInfo(filepath, cover_specs)
+        table.insert(self.extract_calls, filepath)
+        return true
+    end
+    return BookInfoManager
 end
 package.preload["ui/event"] = function()
     return {

@@ -58,6 +58,43 @@ end
 function ComicMeta:init()
     self:onDispatcherRegisterActions()
     self.ui.menu:registerToMainMenu(self)
+    self:hookBookInfoManager()
+end
+
+--- Patch CoverBrowser's BookInfoManager so comic metadata is prepared
+--- right before a comic gets indexed into KOReader's book info cache,
+--- as suggested by the maintainer in issue #31. No-op when the
+--- CoverBrowser plugin is not available.
+function ComicMeta:hookBookInfoManager()
+    local loaded, BookInfoManager = pcall(require, "bookinfomanager")
+    if not loaded or BookInfoManager.comicmeta_original_extractBookInfo then
+        return
+    end
+
+    local comicmeta = self
+    BookInfoManager.comicmeta_original_extractBookInfo = BookInfoManager.extractBookInfo
+    BookInfoManager.extractBookInfo = function(manager, filepath, cover_specs)
+        comicmeta:prepareComicMetadata(filepath)
+        return BookInfoManager.comicmeta_original_extractBookInfo(manager, filepath, cover_specs)
+    end
+end
+
+--- Extract ComicInfo.xml metadata for a comic about to be indexed,
+--- unless automatic extraction is disabled or the file already has
+--- custom metadata.
+function ComicMeta:prepareComicMetadata(filepath)
+    if not self:isAutoExtractionEnabled() then
+        return
+    end
+    local lowercase_path = filepath:lower()
+    if not (lowercase_path:match("%.cbz$") or lowercase_path:match("%.cbr$")) then
+        return
+    end
+    if DocSettings:findCustomMetadataFile(filepath) then
+        return
+    end
+
+    self:processFile(filepath)
 end
 
 --- Add a main menu entry to the UI
