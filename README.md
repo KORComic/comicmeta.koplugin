@@ -10,6 +10,10 @@ https://github.com/user-attachments/assets/dbedf7fa-b5df-4536-8686-919342ff41ce
 
 ## Contributing
 
+### This plugin is 100% human-made with ❤️
+
+Any AI in a PR will be denied. The fact that this even needs said is quite depressing.
+
 ### Running Test
 
 To run test, you can run `make` in the root dir of the project.
