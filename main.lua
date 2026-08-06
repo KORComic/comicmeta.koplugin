@@ -87,6 +87,9 @@ function ComicMeta:processFile(comic_file)
 
     -- Fixup metadata
     for key, value in pairs(metadata) do
+        if type(value) ~= "string" then
+            value = ""
+        end
         if key == "keywords" then
             local out = ""
             local values = util.splitToArray(value, ",", false)
