@@ -87,7 +87,7 @@ function ComicMeta:processFile(comic_file)
 
     -- Fixup metadata
     for key, value in pairs(metadata) do
-        if type(value) ~= "string" then
+        if type(value) == "table" then
             value = ""
         end
         if key == "keywords" then
