@@ -4,9 +4,11 @@ Plugin for KOReader to extract metadata from comic (.cbz and .cbr) files as Cust
 @module koplugin.ComicMeta
 --]]
 --
-package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/?.lua"
-package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/lib/?.lua"
-package.path = package.path .. ";plugins/comicmeta.koplugin/lib/comiclib/third_party/?/?.lua"
+
+local plugin_path = package.path:match("([^;?]+)") -- first path is always the plugin
+package.path = package.path .. ";" .. plugin_path .. "lib/comiclib/?.lua"
+package.path = package.path .. ";" .. plugin_path .. "lib/comiclib/lib/?.lua"
+package.path = package.path .. ";" .. plugin_path .. "lib/comiclib/third_party/?/?.lua"
 
 local ComicLib = require("comiclib")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
