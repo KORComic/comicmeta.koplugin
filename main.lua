@@ -29,6 +29,7 @@ local _ = require("gettext")
 
 local ComicMeta = WidgetContainer:extend({
     name = "comicmeta",
+    fullname = _("Comic Book Metadata"),
     is_doc_only = false,
 })
 
