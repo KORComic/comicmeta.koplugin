@@ -72,19 +72,8 @@ function ComicMeta:processFile(comic_file)
     end
 
     logger.dbg("ComicMeta -> processFile comicInfo.metadata", comicInfo.metadata)
+
     -- Parse the XML for all authors
-    -- All types of authors in ComicInfo
-    local authorTypes = {
-        "Writer",
-        "Penciller",
-        "Inker",
-        "Colorist",
-        "Letterer",
-        "CoverArtist",
-        "Editor",
-        "Translator"
-    }
-    
     local authorMetadata = {
         ["Writer"] = comicInfo.metadata.Writer,
         ["Penciller"] = comicInfo.metadata.Penciller,
@@ -123,20 +112,20 @@ function ComicMeta:processFile(comic_file)
         if value ~= nil then
             local authors = util.splitToArray(value, ",", false)
             for i = 1, #authors do
-                authors[i] = util.trim(authors[i])
-                if authorsTable[authors[i]] == nil then
+                local author = util.trim(authors[i])
+                if authorsTable[author] == nil then
                     if key == "CoverArtist" then
-                        authorsTable[authors[i]] = "Cover Artist" -- Added space for aesthetic reasons
-                        table.insert(authorsNames, authors[i])
+                        authorsTable[author] = "Cover Artist" -- Added space for aesthetic reasons
+                        table.insert(authorsNames, author)
                     else
-                        authorsTable[authors[i]] = key
-                        table.insert(authorsNames, authors[i])
+                        authorsTable[author] = key
+                        table.insert(authorsNames, author)
                     end
                 else
                     if key == "CoverArtist" then
-                        authorsTable[authors[i]] = authorsTable[authors[i]] .. ", " .. "Cover Artist"
+                        authorsTable[author] = authorsTable[author] .. ", " .. "Cover Artist"
                     else
-                        authorsTable[authors[i]] = authorsTable[authors[i]] .. ", " .. key
+                        authorsTable[author] = authorsTable[author] .. ", " .. key
                     end
                 end
             end
