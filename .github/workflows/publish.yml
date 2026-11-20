@@ -4,6 +4,7 @@ on:
     types: [published]
 jobs:
   publish:
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
