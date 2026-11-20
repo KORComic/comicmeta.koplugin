@@ -144,7 +144,7 @@ function ComicMeta:processFile(comic_file)
     end
 
     logger.dbg("ComicMeta -> processFile authorsTable", authorsTable)
-    logger.dbg("ComicMeta -> processFile authorNames", authorNames)
+    logger.dbg("ComicMeta -> processFile authorsNames", authorsNames)
 
     table.sort(authorsNames) -- Sort authorNames alphabetically
     
