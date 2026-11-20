@@ -72,7 +72,30 @@ function ComicMeta:processFile(comic_file)
     end
 
     logger.dbg("ComicMeta -> processFile comicInfo.metadata", comicInfo.metadata)
-
+    -- Parse the XML for all authors
+    -- All types of authors in ComicInfo
+    local authorTypes = {
+        "Writer",
+        "Penciller",
+        "Inker",
+        "Colorist",
+        "Letterer",
+        "CoverArtist",
+        "Editor",
+        "Translator"
+    }
+    
+    local authorMetadata = {
+        ["Writer"] = comicInfo.metadata.Writer,
+        ["Penciller"] = comicInfo.metadata.Penciller,
+        ["Inker"] = comicInfo.metadata.Inker,
+        ["Colorist"] = comicInfo.metadata.Colorist,
+        ["Letterer"] = comicInfo.metadata.Letterer,
+        ["CoverArtist"] = comicInfo.metadata.CoverArtist,
+        ["Editor"] = comicInfo.metadata.Editor,
+        ["Translator"] = comicInfo.metadata.Translator
+    }
+ 
     -- Parse the XML content and create a metadata table
     local metadata = {
         title = comicInfo.metadata.Title,
@@ -87,6 +110,50 @@ function ComicMeta:processFile(comic_file)
     logger.dbg("ComicMeta -> processFile metadata", metadata)
 
     -- Fixup metadata
+
+    -- Table to hold authors and their positions
+    local authorsTable = {}
+    -- Table to hold author's names to sort alphabetically
+    local authorsNames = {}
+    
+    -- Loop adds author and position to authorsTable and author to authorsNames if not already in the tables; if already in authorsTable, add position to value
+    for type = 1, #authorTypes do
+        local a = util.splitToArray(authorMetadata[authorTypes[type]], ",", false)
+        for i = 1, #a do
+            a[i] = util.trim(a[i])
+            if authorsTable[a[i]] == nil then
+                if type == 6 then -- 6 is position of CoverArtist
+                    authorsTable[a[i]] = "Cover Artist" -- Added space for aesthetic reasons
+                    table.insert(authorsNames, a[i])
+                else
+                    authorsTable[a[i]] = authorTypes[type]
+                    table.insert(authorsNames, a[i])
+                end
+            else
+                if type == 6 then
+                    authorsTable[a[i]] = authorsTable[a[i]] .. ", " .. "Cover Artist"
+                else
+                    authorsTable[a[i]] = authorsTable[a[i]] .. ", " .. authorTypes[type]
+                end
+            end
+        end
+    end
+    
+    table.sort(authorsNames) -- Sort authorNames alphabetically
+    
+    local allAuthors = ""
+    
+    -- Concatenate and format all authors with positions
+    for i = 1, #authorsNames do
+        if i >= #authorsNames then
+            allAuthors = allAuthors .. authorsNames[i] .. " (" .. authorsTable[authorsNames[i]] .. ")"
+        else
+            allAuthors = allAuthors .. authorsNames[i] .. " (" .. authorsTable[authorsNames[i]] .. ")\n"
+        end
+    end
+
+    metadata["authors"] = allAuthors
+
     for key, value in pairs(metadata) do
         if key == "keywords" then
             local out = ""
