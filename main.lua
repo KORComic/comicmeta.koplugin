@@ -119,23 +119,25 @@ function ComicMeta:processFile(comic_file)
     local authorsNames = {}
     
     -- Loop adds author and position to authorsTable and author to authorsNames if not already in the tables; if already in authorsTable, add position to value
-    for type = 1, #authorTypes do
-        local a = util.splitToArray(authorMetadata[authorTypes[type]], ",", false)
-        for i = 1, #a do
-            a[i] = util.trim(a[i])
-            if authorsTable[a[i]] == nil then
-                if type == 6 then -- 6 is position of CoverArtist
-                    authorsTable[a[i]] = "Cover Artist" -- Added space for aesthetic reasons
-                    table.insert(authorsNames, a[i])
+    for key, value in pairs(authorMetadata) do
+        if value ~= nil then
+            local authors = util.splitToArray(value, ",", false)
+            for i = 1, #authors do
+                authors[i] = util.trim(authors[i])
+                if authorsTable[authors[i]] == nil then
+                    if key == "CoverArtist" then
+                        authorsTable[authors[i]] = "Cover Artist" -- Added space for aesthetic reasons
+                        table.insert(authorsNames, authors[i])
+                    else
+                        authorsTable[authors[i]] = key
+                        table.insert(authorsNames, authors[i])
+                    end
                 else
-                    authorsTable[a[i]] = authorTypes[type]
-                    table.insert(authorsNames, a[i])
-                end
-            else
-                if type == 6 then
-                    authorsTable[a[i]] = authorsTable[a[i]] .. ", " .. "Cover Artist"
-                else
-                    authorsTable[a[i]] = authorsTable[a[i]] .. ", " .. authorTypes[type]
+                    if key == "CoverArtist" then
+                        authorsTable[authors[i]] = authorsTable[authors[i]] .. ", " .. "Cover Artist"
+                    else
+                        authorsTable[authors[i]] = authorsTable[authors[i]] .. ", " .. key
+                    end
                 end
             end
         end
