@@ -95,7 +95,9 @@ function ComicMeta:processFile(comic_file)
         ["Editor"] = comicInfo.metadata.Editor,
         ["Translator"] = comicInfo.metadata.Translator
     }
- 
+
+    logger.dbg("ComicMeta -> processFile authorMetadata", authorMetadata)
+
     -- Parse the XML content and create a metadata table
     local metadata = {
         title = comicInfo.metadata.Title,
@@ -138,7 +140,10 @@ function ComicMeta:processFile(comic_file)
             end
         end
     end
-    
+
+    logger.dbg("ComicMeta -> processFile authorsTable", authorsTable)
+    logger.dbg("ComicMeta -> processFile authorNames", authorNames)
+
     table.sort(authorsNames) -- Sort authorNames alphabetically
     
     local allAuthors = ""
@@ -151,6 +156,9 @@ function ComicMeta:processFile(comic_file)
             allAuthors = allAuthors .. authorsNames[i] .. " (" .. authorsTable[authorsNames[i]] .. ")\n"
         end
     end
+
+    logger.dbg("ComicMeta -> processFile allAuthors", allAuthors)
+    logger.dbg("ComicMeta -> processFile metadata.authors", metadata.authors)
 
     metadata["authors"] = allAuthors
 
