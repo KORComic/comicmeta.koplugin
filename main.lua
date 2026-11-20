@@ -27,8 +27,6 @@ local util = require("util")
 local T = ffiUtil.template
 local _ = require("gettext")
 
-logger:setLevel(logger.levels.debug)
-
 local ComicMeta = WidgetContainer:extend({
     name = "comicmeta",
     fullname = _("Comic Book Metadata"),
