@@ -109,7 +109,7 @@ function ComicMeta:processFile(comic_file)
     
     -- Loop adds author and position to authorsTable and author to authorsNames if not already in the tables; if already in authorsTable, add position to value
     for key, value in pairs(authorMetadata) do
-        if value ~= nil then
+        if value ~= nil or '' then
             local authors = util.splitToArray(value, ",", false)
             for i = 1, #authors do
                 local author = util.trim(authors[i])
